@@ -1,0 +1,51 @@
+# Render Blueprint: Postgres + wallet-service (this repo) + MCP gateway (sibling repo).
+# Redis is unused at runtime (health check disabled via the `cloud` profile). No Kafka.
+# Secrets are `sync: false` — set them in the Render dashboard, never in this file.
+# Postgres is external (Neon, AWS Singapore, permanent free tier) via DB_* env vars.
+services:
+  - type: web
+    name: apex-payments-engine
+    runtime: docker
+    dockerfilePath: ./Dockerfile
+    healthCheckPath: /actuator/health
+    plan: free
+    envVars:
+      - key: SPRING_PROFILES_ACTIVE
+        value: cloud
+      - key: DB_HOST        # from the Neon connection URI
+        sync: false
+      - key: DB_PORT
+        sync: false
+      - key: DB_NAME
+        sync: false
+      - key: DB_USER
+        sync: false
+      - key: DB_PASSWORD
+        sync: false
+      - key: PSP_WEBHOOK_SECRET
+        sync: false
+
+  - type: web
+    name: payments-mcp-server
+    runtime: docker
+    repo: https://github.com/ashishp-09/payments-mcp-server
+    dockerfilePath: ./Dockerfile
+    plan: free
+    envVars:
+      - key: PAYMENTS_TRANSPORT
+        value: streamable-http
+      - key: PAYMENTS_BACKEND
+        value: http
+      # Set to the wallet-service URL after its first deploy (e.g. https://apex-payments-engine.onrender.com).
+      - key: PAYMENTS_BASE_URL
+        sync: false
+      - key: PAYMENTS_MANDATE_SECRET
+        sync: false
+      - key: PAYMENTS_AUTH_SECRET
+        sync: false
+      - key: PAYMENTS_AUTH_ISSUER
+        sync: false
+      - key: PAYMENTS_AUTH_RESOURCE_URL
+        sync: false
+      - key: PAYMENTS_REDIS_URL
+        sync: false
